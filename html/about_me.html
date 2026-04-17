@@ -10,38 +10,241 @@ IS201
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Me</title>
     <link rel="stylesheet" href="../styles/styles.css">
+    <link rel="stylesheet" href="../styles/layoutstyles.css">
+
 </head>
 <body class="homebg">
-    <a href="../index.html" id="top">Home</a> |
-    <a href="resume.html">Resume</a> |
-    <a href="#">About Me</a>
-    <h4>About Me</h4>
-    <p class="justify">
-    I'm married to Megan Seeley and have one daughter, 
-    Avlaynn. We live in a town house in Spanish Fork. 
-    I like to go on runs, play games with family and friends,
-    and maybe occasionally cook/bake (but not often!).
-    </p>
-    <img src="../images/fam_pic.jpg" width="250" alt="Family picture">
-    <img src="../images/Colby_Portrait_2025.JPG" width="250" alt="Colby Seeley portrait 2">
-    <br>
-    <span class="bold">Things I enjoy:</span>
-    <ol>
-        <li>LEGOs</li>
-        <li>Movies
-            <ul>
-                <li>Interstellar</li>
-                <li>The Last Wish</li>
-                <li>First Man</li>
-            </ul>
-        </li>
-        <li>DIY home projects</li>
-    </ol>
-    <p>&nbsp;</p>
-    <p>&nbsp;</p>
-    <p>&nbsp;</p>
-    <p>&nbsp;</p>
-    <a href="#top">Back to top</a>
-    <p>&nbsp;</p>
+    <a href="../startbootstrap-freelancer-gh-pages/index.html" id="top" class="header">Resume</a> |
+    <a href="/html/scratch_soldering.html" >Scratch Page</a> |
+    <a href="#">Game</a>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Swordy the Sword</title>
+<style>
+body { margin:0; font-family:sans-serif; background:#222; color:#fff; text-align:center; }
+canvas { background:#333; display:block; margin:0 auto; border:3px solid #555; }
+button { padding:10px; margin:5px; font-size:16px; }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="800" height="500"></canvas>
+<div id="ui"></div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
+
+let state = "menu";
+let keys = {};
+let lastTime = 0;
+
+document.addEventListener("keydown", e => keys[e.code]=true);
+document.addEventListener("keyup", e => keys[e.code]=false);
+
+let save = JSON.parse(localStorage.getItem("swordySave")) || {
+  flakes:0,
+  upgrades:{speed:0, damage:0, parry:0, health:0}
+};
+
+function saveGame(){
+  localStorage.setItem("swordySave", JSON.stringify(save));
+}
+
+let player, enemy, room, combo, totalFlakes;
+
+function startRun(){
+  player = {
+    maxHp: 100 + save.upgrades.health*20,
+    hp: 100 + save.upgrades.health*20,
+    dmg: 10 + save.upgrades.damage*3,
+    speed: 800 - save.upgrades.speed*50,
+    lastAttack:0,
+    parryLimit: 2 + save.upgrades.parry,
+    parryCount:0,
+    parryWindow:0,
+    vulnerable:false
+  };
+  room = 1;
+  combo = 0;
+  totalFlakes = 0;
+  spawnEnemy();
+  state="combat";
+}
+
+function spawnEnemy(){
+  let types = [
+    {name:"Goblin", hp:50, dmg:8, speed:1500, color:"green"},
+    {name:"Skeleton", hp:70, dmg:10, speed:1700, color:"white"},
+    {name:"Orc", hp:100, dmg:15, speed:2200, color:"darkgreen"},
+    {name:"Slime", hp:120, dmg:6, speed:2000, color:"lime"}
+  ];
+  let t = types[Math.floor(Math.random()*types.length)];
+  enemy = {
+    name:t.name,
+    hp: t.hp + room*15,
+    maxHp: t.hp + room*15,
+    dmg: t.dmg + room*2,
+    speed: Math.max(600, t.speed - room*20),
+    lastAttack:0,
+    windup:false,
+    windupTime:0,
+    color:t.color,
+    modifier: Math.random()<0.3 ? "fast" : null
+  };
+  if(enemy.modifier==="fast") enemy.speed *=0.7;
+}
+
+function attack(){
+  let now = performance.now();
+  if(now - player.lastAttack < player.speed) return;
+  player.lastAttack = now;
+
+  let crit = Math.random()<0.1;
+  let dmg = player.dmg * (crit?2:1);
+
+  enemy.hp -= dmg;
+  combo++;
+  if(enemy.hp<=0){
+    let gained = Math.floor(10 + room*5 + combo*2);
+    save.flakes += gained;
+    totalFlakes += gained;
+    room++;
+    combo=0;
+    spawnEnemy();
+  }
+
+  player.parryCount=0;
+}
+
+function parry(){
+  if(player.parryCount>=player.parryLimit) return;
+  player.parryWindow = performance.now()+400;
+}
+
+function update(dt){
+  if(state!=="combat") return;
+
+  let now = performance.now();
+
+  if(keys["KeyW"] || keys["KeyD"]) attack();
+  if(keys["Space"]) parry();
+
+  if(now - enemy.lastAttack > enemy.speed){
+    enemy.windup=true;
+    enemy.windupTime = now + 500;
+    enemy.lastAttack = now;
+  }
+
+  if(enemy.windup && now > enemy.windupTime){
+    enemy.windup=false;
+
+    if(player.parryWindow > now && player.parryCount < player.parryLimit){
+      player.parryCount++;
+    } else {
+      player.hp -= enemy.dmg;
+      combo=0;
+      if(player.hp<=0){
+        state="gameOver";
+      }
+    }
+  }
+
+  if(player.parryWindow < now) player.parryWindow=0;
+}
+
+function drawBar(x,y,w,h,val,max,color){
+  ctx.fillStyle="#555";
+  ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=color;
+  ctx.fillRect(x,y,w*(val/max),h);
+}
+
+function draw(){
+  ctx.clearRect(0,0,800,500);
+
+  if(state==="menu"){
+    ctx.fillText("Swordy the Sword", 300,200);
+    ui.innerHTML = "<button onclick='startRun()'>Start</button>";
+  }
+
+  if(state==="combat"){
+    ui.innerHTML = `
+    <button onclick="attack()">Attack</button>
+    <button onclick="parry()">Parry</button>
+    `;
+
+    ctx.fillText("Room: "+room, 10,20);
+    ctx.fillText("Flakes: "+save.flakes, 10,40);
+
+    drawBar(50,400,200,20,player.hp,player.maxHp,"red");
+    drawBar(550,100,200,20,enemy.hp,enemy.maxHp,"green");
+
+    ctx.fillStyle="white";
+    ctx.fillText("Swordy",100,380);
+    ctx.fillText(enemy.name,600,80);
+
+    // Sword
+    ctx.fillStyle="silver";
+    ctx.fillRect(120,300,20,80);
+    ctx.fillStyle="white";
+    ctx.fillRect(125,310,5,5);
+    ctx.fillRect(135,310,5,5);
+
+    // Enemy
+    ctx.fillStyle=enemy.windup?"red":enemy.color;
+    ctx.fillRect(600,150,80,80);
+  }
+
+  if(state==="gameOver"){
+    ui.innerHTML = `
+    <h2>Game Over</h2>
+    <p>Rooms: ${room}</p>
+    <p>Flakes earned: ${totalFlakes}</p>
+    <button onclick="state='shop'">Shop</button>
+    `;
+  }
+
+  if(state==="shop"){
+    function cost(lvl){ return Math.floor(20*Math.pow(1.5,lvl)); }
+
+    ui.innerHTML = `
+    <h2>Blacksmith 🔨</h2>
+    <p>Flakes: ${save.flakes}</p>
+    <button onclick="buy('damage')">Damage Lv ${save.upgrades.damage} (${cost(save.upgrades.damage)})</button>
+    <button onclick="buy('speed')">Speed Lv ${save.upgrades.speed} (${cost(save.upgrades.speed)})</button>
+    <button onclick="buy('parry')">Parry Lv ${save.upgrades.parry} (${cost(save.upgrades.parry)})</button>
+    <button onclick="buy('health')">Health Lv ${save.upgrades.health} (${cost(save.upgrades.health)})</button>
+    <br><button onclick="startRun()">Start Run</button>
+    `;
+  }
+}
+
+function buy(type){
+  let lvl = save.upgrades[type];
+  if(lvl>=10) return;
+  let c = Math.floor(20*Math.pow(1.5,lvl));
+  if(save.flakes>=c){
+    save.flakes-=c;
+    save.upgrades[type]++;
+    saveGame();
+  }
+}
+
+function loop(time){
+  let dt = time - lastTime;
+  lastTime = time;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+
 </body>
 </html>
