@@ -1,5 +1,5 @@
 body {
-    background-color: burlywood;
+    background-color: #237499;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
@@ -13,28 +13,28 @@ body {
     top: 12px;
     left: 5px;
     right: 5px;
-    height: 100px;
+    height: 50px;
     z-index: 2;
 }
 
 .leftmenu {
-    top: 114px;
+    top: 64px;
     left: 5px;
-    width: 100px;
+    width: 650px;
     bottom: 39px;
     padding-top: 20px;
 }
 
 .mainbody {
-    top: 114px;
-    left: 107px;
+    top: 64px;
+    left: 657px;
     right: 107px;
     bottom: 39px;
     /* padding-top: 80px; */
 }
 
 .rightmenu {
-    top: 114px;
+    top: 64px;
     right: 5px;
     width: 100px;
     bottom: 39px;
@@ -47,6 +47,7 @@ body {
     height: 25px;
     position: fixed;
     text-align: center;
+    background-color: black;
 }
 
 .subheader {
