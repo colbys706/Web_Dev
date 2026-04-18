@@ -17,13 +17,13 @@ IS201
             min-height: 100vh;
             background: linear-gradient(180deg, #2d1c17 0%, #4b3027 45%, #8d5f3d 100%);
             color: #fff7eb;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Cambria, Helvetica, sans-serif;
         }
-
+/* nav colors and align*/
         .game-nav {
             padding: 1rem;
-            text-align: center;
-            background: rgba(44, 24, 17, 0.72);
+            text-align: right;
+            background: rgba(122, 70, 51, 0.72);
         }
 
         .game-nav a {
@@ -44,11 +44,14 @@ IS201
             margin: 0 0 0.5rem;
             font-size: 2.5rem;
             letter-spacing: 0.04em;
+            font-family: Georgia, 'Times New Roman', Times, serif;
         }
 
         .game-subtitle {
             margin: 0 0 1.5rem;
             color: #ffe5b8;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: large;
         }
 
         #game {
@@ -63,11 +66,11 @@ IS201
         }
 
         #ui {
-            max-width: 920px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 1rem;
             border-radius: 14px;
-            background: rgba(58, 35, 26, 0.82);
+            background: rgba(43, 26, 19, 0.82);
             box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
         }
 
@@ -75,21 +78,21 @@ IS201
         #ui p {
             margin: 0.35rem 0;
         }
-
+/* button color */
         #ui button {
             margin: 0.35rem;
             padding: 0.8rem 1.25rem;
             border: 0;
             border-radius: 999px;
-            background: #c86f4a;
+            background: #df855f;
             color: #fff;
             font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
         }
-
+/* button color on */
         #ui button:hover {
-            background: #b45d38;
+            background: #fd4c00;
         }
 
         .game-help {
@@ -97,6 +100,9 @@ IS201
             margin: 1rem auto 0;
             color: #ffe5b8;
             line-height: 1.5;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: large;
+
         }
     </style>
 </head>
@@ -115,11 +121,12 @@ IS201
 
         <canvas id="game" width="920" height="420"></canvas>
         <div id="ui"></div>
-        <p class="game-help">Controls: use the on-screen <strong>Attack</strong> and <strong>Parry</strong> buttons. Parries are limited each room, so use them carefully.  
+        <p class="game-help">Controls: use the on-screen <strong>Attack</strong> and <strong>Parry</strong> buttons. Parries are limited, so use them carefully.  
         <br><br> Fiddly details:
-        <br>Critical hits are x2 damage (yellow number)
-        <br>Regenerate x1 parry by landing a hit
-        <br> Upgrades:
+        <br>Critical hits are x2 damage (yellow counter).
+        <br>Regenerate x1 parry by landing a hit.
+        <br>Higher combos reward more shards!
+        <br><br> Upgrades:
         <br> (1) Damage: Increases Swordy's attack damage.
         <br> (2) Speed: Decreases Swordy's attack cooldown.
         <br> (3) Parry: Increases Swordy's parry count.
@@ -299,16 +306,16 @@ IS201
             if (nextRoom === 10) {
                 return {
                     name: "Red Dragon",
-                    hp: 550,
-                    maxHp: 550,
-                    dmg: 70,
+                    hp: 500,
+                    maxHp: 500,
+                    dmg: 120,
                     speed: 3200,
                     lastAttack: performance.now(),
                     windup: false,
                     windupTime: 0,
                     color: "#c43d2b",
                     modifier: null,
-                    parryLimit: 5,
+                    parryLimit: 15,
                     parryCount: 0,
                     parryWindow: 0,
                     isBoss: true,
@@ -327,7 +334,7 @@ IS201
                     hp: 300,
                     maxHp: 300,
                     dmg: 35,
-                    speed: 1350,
+                    speed: 1250,
                     lastAttack: performance.now(),
                     windup: false,
                     windupTime: 0,
@@ -348,16 +355,16 @@ IS201
 
             return {
                 name: "Mouse",
-                hp: 160,
-                maxHp: 160,
-                dmg: 18,
-                speed: 700,
+                hp: 200,
+                maxHp: 200,
+                dmg: 5,
+                speed: 300,
                 lastAttack: performance.now(),
                 windup: false,
                 windupTime: 0,
                 color: "#b8b8b8",
                 modifier: null,
-                parryLimit: 30,
+                parryLimit: 0,
                 parryCount: 0,
                 parryWindow: 0,
                 isBoss: true,
@@ -386,6 +393,7 @@ IS201
         }
 
         function startRun() {
+            // upgrade stats. use this to make mirror sword boss
             player = {
                 maxHp: 100 + save.upgrades.health * 20,
                 hp: 100 + save.upgrades.health * 20,
@@ -420,29 +428,29 @@ IS201
             }
 
             const types = [
-                { name: "Goblin", hp: 40, dmg: 8, speed: 1500, color: "#4ea64e" },
-                { name: "Skeleton", hp: 60, dmg: 10, speed: 1700, color: "#d8d8d8" },
-                { name: "Orc", hp: 75, dmg: 18, speed: 2250, color: "#2d7c49" },
-                { name: "Slime", hp: 100, dmg: 5, speed: 2000, color: "#84d96d" }
+                { name: "Goblin", hp: 40, dmg: 8, speed: 1500, parry: 0, color: "#8DA600" },
+                { name: "Skeleton", hp: 55, dmg: 10, speed: 1700, parry: 1, color: "#ABABAB" },
+                { name: "Troll", hp: 70, dmg: 15, speed: 2250, parry: 2, color: "#0081BD" },
+                { name: "Slime", hp: 100, dmg: 5, speed: 2000, parry: 0, color: "#26BA00" }
             ];
 
             const type = types[Math.floor(Math.random() * types.length)];
-            const heavy = Math.random() < 0.26;
-            const fast = !heavy && Math.random() < 0.34;
+            const heavy = Math.random() < 0.22;
+            const fast = !heavy && Math.random() < 0.3;
 
             enemy = {
                 name: type.name,
                 <!--on this line, (heavy ? ) is asking if they are heavy.-->
                 hp: type.hp + (room-1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
                 maxHp: type.hp + (room - 1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
-                dmg: type.dmg + room * 2 + (heavy ? 3*room : fast? -2*room : 0),
-                speed: Math.max(600, type.speed - room * 30 * (heavy ? 1.25 : fast ? 0.7 : 1)),
+                dmg: type.dmg + room * 2 + (heavy ? 3*room : fast? -1*room : 0),
+                speed: Math.max(600, (type.speed - room * 15) * (heavy ? 1.25 : fast ? 0.75 : 1)),
                 lastAttack: performance.now(),
                 windup: false,
                 windupTime: 0,
-                color: heavy ? "#4f4f4f" : fast ? "#b3b3b3": type.color,
-                modifier: heavy ? "heavy" : (fast ? "fast" : null),
-                parryLimit: 2 + Math.min(3, Math.floor(room / 3)) + (heavy ? 2 : fast ? -2 : 0),
+                color: heavy && type.name === "Goblin" ? "#657800" : heavy && type.name === "Skeleton" ? "#595959" : heavy && type.name === "Troll" ? "#003954" : heavy && type.name === "Slime" ? "#146600" : fast && type.name === "Goblin"? "#D8FF00" : fast && type.name === "Skeleton"? "#EDEDED" : fast && type.name === "Troll"? "#00B9FF" : fast && type.name === "Slime"? "#2BFF00" : type.color , 
+                modifier: heavy ? "heavy" : fast ? "fast" : null,
+                parryLimit: type.parry + Math.min(1, Math.floor(room / 2)) + (heavy ? 2 : fast ? -1 : 0),
                 parryCount: 0,
                 parryWindow: 0,
                 isBoss: false,
@@ -494,25 +502,28 @@ IS201
             player.attackFlashUntil = now + 160;
 
             if (enemy.parryWindow > now) {
-                combo = 0;
+                combo = 0; 
                 enemyParrySuccessUntil = now + 220;
                 playSound("swordAttack");
                 playSound("enemyBlock");
                 return;
             }
-
-            const parryChance = enemy.isBoss ? 0.42 : 0.34;
+// parry chance .42 : 0.34, enemy parry
+            const parryChance = enemy.isBoss ? 0.40 : 0.25;
+            // math.random() gives random number between 0 and 1 (1 is excluded)
             if (enemy.parryCount < enemy.parryLimit && !enemy.windup && Math.random() < parryChance) {
                 enemy.parryCount++;
                 enemy.parryWindow = now + 400;
                 enemyParrySuccessUntil = now + 220;
-                combo = 0;
+                //removed combo reset on enemy block___line below
+                // combo = 0; 
                 playSound("swordAttack");
                 playSound("enemyBlock");
                 return;
             }
-
+            // Crit Chance (player)
             const crit = Math.random() < 0.1;
+            // Crit damage (player)
             const damage = player.dmg * (crit ? 2 : 1);
             playSound(crit ? "swordCrit" : "swordAttack");
             enemy.hp -= damage;
@@ -521,7 +532,8 @@ IS201
             addDamagePopup("enemy", damage, crit);
 
             if (enemy.hp <= 0) {
-                const gained = enemy.isBoss ? Math.floor(80 + room * 8) : Math.floor(10 + room * 5 + combo * 2);
+                // shard reward. Increases with room number, and combo number. Boss has more reward
+                const gained = enemy.isBoss ? Math.floor(80 + room * 5 + combo * 10) : Math.floor(10 + room * 5 + combo * 5);
                 save.shards += gained;
                 totalShards += gained;
                 const defeatedBossNumber = enemy.bossNumber;
@@ -533,7 +545,7 @@ IS201
                     renderedState = "";
                     swordyPose = "fallen";
                     swordyX = canvas.width / 2;
-                    swordyY = 290;
+                    swordyY = 190;
                     swordyFallAngle = Math.PI;
                     playSound("win");
                 } else {
@@ -568,7 +580,8 @@ IS201
             if (save.shards >= cost) {
                 save.shards -= cost;
                 save.upgrades[type]++;
-                hammerSwing = 0.55;
+                // hammer swing speed, closer to 0 is faster
+                hammerSwing = 1;
                 saveGame();
                 renderedState = "";
                 playSound("upgrade");
@@ -607,7 +620,7 @@ IS201
                     "<button type='button' data-action='start'>Start Run</button>"
                 ].join("");
             } else if (state === "victory") {
-                ui.innerHTML = "<button type='button' data-action='reset'>Play again?</button>";
+                ui.innerHTML = "<button type='button' data-action='reset'>Play again? (full reset)</button>";
             }
 
             renderedState = state;
@@ -637,7 +650,9 @@ IS201
                         swordyParrySuccessUntil = now + 220;
                         playSound("perfectParry");
                     } else {
-                        const crit = Math.random() < 0.12;
+                        // Crit chance
+                        const crit = Math.random() < 0.10;
+                        // Crit damage
                         const damage = enemy.dmg * (crit ? 2 : 1);
                         playSound(crit ? "enemyCrit" : "enemyAttack");
                         player.hp -= damage;
@@ -677,20 +692,19 @@ IS201
 
         function renderMenu() {
             ctx.fillStyle = "#fff7eb";
-            ctx.font = "700 42px Arial";
+            ctx.font = "700 42px Cambria";
             ctx.textAlign = "center";
-            ctx.font = "22px Arial";
+            ctx.font = "22px Cambria";
             ctx.fillStyle = "#ffd793";
-            ctx.fillText("Use the buttons below to attack and parry.", canvas.width / 2, 230);
-            ctx.fillText("Press Start Adventure below to begin.", canvas.width / 2, 270);
+            ctx.fillText("Use the buttons below to attack and parry.", canvas.width / 2, 180);
+            ctx.fillText("Press Start Adventure below to begin.", canvas.width / 2, 220);
             ctx.textAlign = "left";
         }
 
         function drawSwordy() {
+            // swordy character
             const now = performance.now();
             const flash = player && player.attackFlashUntil > now;
-            const bladeColor = flash ? "#FC5151" : "#94999C";
-
             ctx.save();
             ctx.translate(swordyX, swordyY);
             ctx.rotate(swordyFallAngle);
@@ -700,11 +714,34 @@ IS201
                 ctx.fillRect(-10, -95, 18, 100);
                 ctx.fillRect(-24, -12, 26, 10);
             } else {
-                ctx.fillStyle = bladeColor;
-                ctx.fillRect(-10, -105, 20, 116);
-                ctx.fillStyle = flash ? "#ffb0b0" : "#fff";
+                // This is swordy's blade
+                const gradient = ctx.createLinearGradient(-10, -105, 20, 90);
+                //color gradient!
+                gradient.addColorStop(0, "#ADADAD");     // start
+                gradient.addColorStop(0.5, "#CCCCCC"); // middle
+                gradient.addColorStop(1, "#F2F2F2");     // end
+                ctx.fillStyle = gradient;
+                // ctx.fillRect(-10, -105, 20, 116); //original blade
+                ctx.fillRect(-10, -105, 20, 90); //shortened blade
+                ctx.beginPath();
+                ctx.moveTo(-10, -105);
+                ctx.lineTo(0, -130);
+                ctx.lineTo(10, -105);
+                ctx.closePath();
+                ctx.fill();
+                // swordy's handle
+                ctx.fillStyle = flash ? "#825416" : "#825416"
+                ctx.fillRect(-5, -10, 10, 30)
+                // this is swordy' hilt
+                ctx.fillStyle = flash ? "#5C5C5C" : "#5C5C5C";
                 ctx.fillRect(-24, -18, 50, 12);
-                ctx.fillRect(-3, -88, 6, 22);
+                // this is swordy's eyes
+                ctx.fillStyle = flash ? "#757BFF" : "#757BFF";
+                ctx.fillRect(-6, -84, 4, 14);
+                ctx.fillRect(2, -84, 4, 14);
+                // swordy's mouth
+                ctx.fillStyle = flash ? "#5C5C5C" : "#5C5C5C"
+                ctx.fillRect(-4, -60, 8, 4)
             }
 
             ctx.restore();
@@ -721,21 +758,24 @@ IS201
         function drawHammerCharacter(showJoke) {
             ctx.save();
             ctx.translate(hammerX, 220);
-            const swing = Math.sin(hammerSwing * Math.PI) * 0.8;
-
+            // hammer swing length
+            const swing = Math.sin(hammerSwing * Math.PI) * -2;
+            // shop text display
             ctx.fillStyle = "#fff7eb";
-            ctx.font = "700 28px Arial";
+            ctx.font = "700 28px Cambria";
             ctx.textAlign = "center";
-            ctx.fillText("Sharpen Up at the Forge", -170, -58);
-            ctx.font = "20px Arial";
+            ctx.fillText("Sharpen Up at the Forge!", -220, -120);
+            ctx.font = "20px Cambria";
             ctx.fillStyle = "#ffd793";
-            ctx.fillText("Spend shards to survive deeper rooms.", -170, -28);
+            ctx.fillText("Spend shards to survive deeper rooms.", -220, -80);
+            ctx.fillText("Hammery the Hammer will strengthen and motivate you :D", -220, -40);
+
 
             if (showJoke && currentShopJoke) {
                 ctx.fillStyle = "rgba(77, 51, 39, 0.92)";
                 ctx.fillRect(-390, 2, 370, 88);
                 ctx.fillStyle = "#fff7eb";
-                ctx.font = "18px Arial";
+                ctx.font = "18px Cambria";
                 ctx.textAlign = "left";
                 wrapText(currentShopJoke, -370, 31, 330, 22);
                 ctx.textAlign = "center";
@@ -743,7 +783,7 @@ IS201
 
             ctx.fillStyle = "#2b2f38";
             ctx.fillRect(-22, 28, 10, 68);
-
+            // hammer char
             ctx.save();
             ctx.translate(-6, 34);
             ctx.rotate(-0.1 + swing);
@@ -757,12 +797,15 @@ IS201
             ctx.fillRect(-8, -8, 12, 4);
             ctx.restore();
 
-            ctx.fillStyle = "#a6afba";
-            ctx.fillRect(-56, 100, 92, 20);
+            ctx.fillStyle = "#808080";
+            // anvil top
+            // In this example, a green rectangle is drawn with its top-left corner at (20, 10), a width of 150 pixels, and a height of 100 pixels.
+            ctx.fillRect(-100, 70, 88, 30);
+            // anvil base
             ctx.beginPath();
-            ctx.moveTo(-36, 120);
-            ctx.lineTo(16, 120);
-            ctx.lineTo(-10, 154);
+            ctx.moveTo(-81, 125);
+            ctx.lineTo(-29, 125);
+            ctx.lineTo(-55, 91);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
@@ -772,7 +815,7 @@ IS201
             damagePopups.forEach((popup) => {
                 ctx.save();
                 ctx.globalAlpha = Math.max(0, popup.life);
-                ctx.font = popup.isCritical ? "700 26px Arial" : "700 22px Arial";
+                ctx.font = popup.isCritical ? "700 26px Cambria" : "700 22px Cambria";
                 ctx.fillStyle = popup.isCritical ? "#ffd34d" : "#ffffff";
                 ctx.fillText("-" + popup.amount, popup.x, popup.y);
                 ctx.restore();
@@ -801,7 +844,7 @@ IS201
         }
 
         function drawSlime() {
-            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.fillStyle = enemy.windup ? "#FF8787" : enemy.color;
             ctx.fillRect(560, 150, 110, 110);
             ctx.fillStyle = "#222";
             ctx.fillRect(585, 178, 12, 12);
@@ -810,7 +853,7 @@ IS201
         }
 
         function drawSkeleton() {
-            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.fillStyle = enemy.windup ? "#FF8787" : enemy.color;
             ctx.beginPath();
             ctx.arc(615, 198, 52, 0, Math.PI * 2);
             ctx.fill();
@@ -825,7 +868,7 @@ IS201
         }
 
         function drawGoblin() {
-            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.fillStyle = enemy.windup ? "#FF8787" : enemy.color;
             ctx.beginPath();
             ctx.moveTo(610, 142);
             ctx.lineTo(575, 185);
@@ -841,8 +884,8 @@ IS201
             ctx.fillRect(598, 228, 24, 8);
         }
 
-        function drawOrc() {
-            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+        function drawTroll() {
+            ctx.fillStyle = enemy.windup ? "#FF8787" : enemy.color;
             ctx.beginPath();
             ctx.moveTo(576, 140);
             ctx.lineTo(660, 140);
@@ -950,8 +993,8 @@ IS201
                 drawSkeleton();
             } else if (enemy.name === "Goblin") {
                 drawGoblin();
-            } else if (enemy.name === "Orc") {
-                drawOrc();
+            } else if (enemy.name === "Troll") {
+                drawTroll();
             } else {
                 drawSlime();
             }
@@ -966,24 +1009,32 @@ IS201
         }
 
         function renderCombat() {
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            //color gradient!
+            gradient.addColorStop(0, "#516DA8");     // start
+            gradient.addColorStop(0.5, "#000000"); // middle
+            gradient.addColorStop(1, "#A84040");     // end
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             ctx.fillStyle = "#fff7eb";
-            ctx.font = "700 30px Arial";
+            ctx.font = "700 30px Cambria";
             ctx.fillText("Room: " + room, 25, 38);
-            ctx.font = "22px Arial";
+            ctx.font = "22px Cambria";
             ctx.fillText("Shards: " + save.shards, 25, 65);
             ctx.fillText("Combo: " + combo, 25, 95);
             ctx.fillText("Parries Left: " + (player.parryLimit - player.parryCount), 25, 125);
-            ctx.fillText("Enemy Blocks Left: " + (enemy.parryLimit - enemy.parryCount), 585, 35);
-
-            drawBar(70, 372, 260, 20, player.hp, player.maxHp, "#d65656");
-            drawBar(590, 70, 260, 22, enemy.hp, enemy.maxHp, "#63b95c");
+            ctx.fillText("Enemy Parries Left: " + (enemy.parryLimit - enemy.parryCount), 590, 35);
+//hp bars, color and placement and size
+            drawBar(70, 372, 260, 24, player.hp, player.maxHp, "#d65656");
+            drawBar(590, 70, 260, 24, enemy.hp, enemy.maxHp, "#63b95c");
             ctx.fillText("HP: " + player.hp + "/" + player.maxHp, 70, 364);
             ctx.fillText("HP: " + enemy.hp + "/" + enemy.maxHp, 590, 62);
-
+// Swordy's name, enemy name
             ctx.fillStyle = "#fff";
-            ctx.fillText("Swordy", 115, 390);
+            ctx.fillText("Swordy", 75, 390);
             const modifierText = enemy.isBoss ? " (Boss)" : (enemy.modifier ? " (" + enemy.modifier.charAt(0).toUpperCase() + enemy.modifier.slice(1) + ")" : "");
-            ctx.fillText(enemy.name + modifierText, 590, 116);
+            ctx.fillText(enemy.name + modifierText, 595, 89);
 
             drawSwordy();
             drawEnemy();
@@ -991,22 +1042,39 @@ IS201
         }
 
         function renderGameOver() {
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            //color gradient!
+            gradient.addColorStop(0, "#F25252");     // start
+            gradient.addColorStop(0.5, "#B02323"); // middle
+            gradient.addColorStop(1, "#8C0404");     // end
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             ctx.fillStyle = "#fff7eb";
-            ctx.font = "700 44px Arial";
-            ctx.fillText("Swordy Has Fallen", 220, 120);
-            ctx.font = "24px Arial";
+            ctx.font = "700 44px Cambria";
+            ctx.fillText("Swordy has fallen!", 280, 140);
+            ctx.font = "24px Cambria";
             ctx.fillStyle = "#ffd793";
-            ctx.fillText("Restock, upgrade, and take another run.", 215, 165);
+            ctx.fillText("Rest up, upgrade, and take another run.", 265, 185);
             drawSwordy();
             drawDamagePopups();
         }
 
         function renderVictory() {
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            //color gradient!
+            gradient.addColorStop(0, "#0C4199");     // start
+            gradient.addColorStop(0.5, "#3267C2"); // middle
+            gradient.addColorStop(1, "#5287EB");     // end
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             ctx.fillStyle = "#fff7eb";
-            ctx.font = "700 34px Arial";
+            ctx.font = "700 34px Cambria";
             ctx.textAlign = "center";
             ctx.fillText("Congratulations! Swordy the Sword has slain every foe,", canvas.width / 2, 82);
-            ctx.fillText("and awaits the arrival of King Arthur to grant him new life.", canvas.width / 2, 122);
+            ctx.fillText("and awaits the arrival of King Arthur", canvas.width / 2, 122);
+            ctx.fillText("to grant him new life.", canvas.width / 2, 162);
             ctx.textAlign = "left";
 
             ctx.fillStyle = "#7f7f85";
@@ -1026,8 +1094,10 @@ IS201
 
         function draw() {
             renderUi();
+            // this line is where the background is rendered, change canvas color here!!
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#2b2f38";
+            // ctx.fillStyle = "#2b2f38"; //og color
+            ctx.fillStyle = "#363B45";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             if (state === "menu") {
@@ -1044,25 +1114,27 @@ IS201
         }
 
         function fullResetGame() {
-            save = {
-                shards: 0,
-                upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
-            };
-            localStorage.removeItem("swordySave");
-            player = undefined;
-            enemy = undefined;
-            room = 1;
-            combo = 0;
-            totalShards = 0;
-            currentShopJoke = "";
-            damagePopups = [];
-            swordyParrySuccessUntil = 0;
-            enemyParrySuccessUntil = 0;
-            hammerSwing = 0;
-            hammerX = 300;
-            resetSwordyPose();
-            state = "menu";
-            renderedState = "";
+            if (confirm("Are you sure you want to reset all upgrades? \n(Press cancel and refresh page to keep upgrades)") == true) {
+                save = {
+                    shards: 0,
+                    upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
+                };
+                localStorage.removeItem("swordySave");
+                player = undefined;
+                enemy = undefined;
+                room = 1;
+                combo = 0;
+                totalShards = 0;
+                currentShopJoke = "";
+                damagePopups = [];
+                swordyParrySuccessUntil = 0;
+                enemyParrySuccessUntil = 0;
+                hammerSwing = 0;
+                hammerX = 300;
+                resetSwordyPose();
+                state = "menu";
+                renderedState = "";
+            }
         }
 
         function loop() {
