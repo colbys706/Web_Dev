@@ -1,0 +1,1107 @@
+<!--
+Colby Seeley
+IS201
+04/09/2026
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swordy the Sword</title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <link rel="stylesheet" href="../styles/layoutstyles.css">
+    <style>
+        .game-page {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #2d1c17 0%, #4b3027 45%, #8d5f3d 100%);
+            color: #fff7eb;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .game-nav {
+            padding: 1rem;
+            text-align: center;
+            background: rgba(44, 24, 17, 0.72);
+        }
+
+        .game-nav a {
+            color: #ffd793;
+            margin: 0 0.35rem;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .game-shell {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1rem 3rem;
+            text-align: center;
+        }
+
+        .game-title {
+            margin: 0 0 0.5rem;
+            font-size: 2.5rem;
+            letter-spacing: 0.04em;
+        }
+
+        .game-subtitle {
+            margin: 0 0 1.5rem;
+            color: #ffe5b8;
+        }
+
+        #game {
+            display: block;
+            width: min(100%, 920px);
+            height: auto;
+            margin: 0 auto 1rem;
+            background: #2b2f38;
+            border: 4px solid #d7a648;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        #ui {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 1rem;
+            border-radius: 14px;
+            background: rgba(58, 35, 26, 0.82);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
+        }
+
+        #ui h2,
+        #ui p {
+            margin: 0.35rem 0;
+        }
+
+        #ui button {
+            margin: 0.35rem;
+            padding: 0.8rem 1.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: #c86f4a;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #ui button:hover {
+            background: #b45d38;
+        }
+
+        .game-help {
+            max-width: 920px;
+            margin: 1rem auto 0;
+            color: #ffe5b8;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="game-page">
+    <nav class="game-nav">
+        <a href="../startbootstrap-freelancer-gh-pages/index.html" id="top">Resume</a>
+        |
+        <a href="scratch_soldering.html">Scratch Page</a>
+        |
+        <a href="#">Game</a>
+    </nav>
+
+    <main class="game-shell">
+        <h1 class="game-title">Swordy the Sword</h1>
+        <p class="game-subtitle">Fight through rooms, time your parries, and spend your flakes at the blacksmith.</p>
+
+        <canvas id="game" width="920" height="420"></canvas>
+        <div id="ui"></div>
+        <p class="game-help">Controls: use the on-screen <strong>Attack</strong> and <strong>Parry</strong> buttons. Parries are limited each room, so use them carefully.  
+        <br><br> Fiddly details:
+        <br>Critical hits are x2 damage (yellow number)
+        <br>Regenerate x1 parry by landing a hit
+        <br> Upgrades:
+        <br> (1) Damage: Increases Swordy's attack damage.
+        <br> (2) Speed: Decreases Swordy's attack cooldown.
+        <br> (3) Parry: Increases Swordy's parry count.
+        <br> (4) Health: Increases Swordy's hitpoints.
+        </p>
+    </main>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const ui = document.getElementById("ui");
+
+        let state = "menu";
+        let renderedState = "";
+        let audioContext;
+        let player;
+        let enemy;
+        let room = 1;
+        let combo = 0;
+        let totalFlakes = 0;
+        let swordyPose = "ready";
+        let swordyX = 165;
+        let swordyY = 322;
+        let swordyFallAngle = 0;
+        let hammerSwing = 0;
+        let hammerX = 300;
+        let currentShopJoke = "";
+        let damagePopups = [];
+        let swordyParrySuccessUntil = 0;
+        let enemyParrySuccessUntil = 0;
+
+        const shopJokes = [
+            "I told the dagger a joke, but it went over its point.",
+            "This blade is so sharp it cuts corners professionally.",
+            "Swordy wanted a raise, so I said let's hammer it out.",
+            "The broadsword opened a bakery. Its rolls were cutting-edge.",
+            "My favorite sword joke? It always lands with a point.",
+            "The rapier joined a choir because it loved sharp notes.",
+            "A katana opened a tailor shop. It specialized in clean cuts.",
+            "The saber got promoted because it always stayed on point.",
+            "The scimitar tried comedy, but its jokes curved too much.",
+            "The longsword wrote memoirs called From Rust to Glory."
+        ];
+
+        let save;
+        try {
+            save = JSON.parse(localStorage.getItem("swordySave")) || {
+                flakes: 0,
+                upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
+            };
+        } catch (error) {
+            save = {
+                flakes: 0,
+                upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
+            };
+        }
+
+        function saveGame() {
+            localStorage.setItem("swordySave", JSON.stringify(save));
+        }
+
+        function getAudioContext() {
+            if (!audioContext) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) {
+                    return null;
+                }
+                audioContext = new AudioContextClass();
+            }
+            return audioContext;
+        }
+
+        function playToneSequence(steps, volume = 0.05) {
+            const context = getAudioContext();
+            if (!context) {
+                return;
+            }
+            if (context.state === "suspended") {
+                context.resume();
+            }
+
+            const startTime = context.currentTime + 0.01;
+            let offset = 0;
+            steps.forEach((step) => {
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+                const time = startTime + offset;
+
+                oscillator.type = step.type || "sine";
+                oscillator.frequency.setValueAtTime(step.frequency, time);
+                gainNode.gain.setValueAtTime(0.0001, time);
+                gainNode.gain.exponentialRampToValueAtTime(step.volume || volume, time + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, time + step.duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.start(time);
+                oscillator.stop(time + step.duration);
+                offset += step.duration;
+            });
+        }
+
+        function playSound(name) {
+            const sounds = {
+                start: [
+                    { frequency: 392, duration: 0.1, type: "triangle", volume: 0.06 },
+                    { frequency: 523.25, duration: 0.12, type: "triangle", volume: 0.06 },
+                    { frequency: 659.25, duration: 0.16, type: "triangle", volume: 0.07 }
+                ],
+                swordAttack: [
+                    { frequency: 620, duration: 0.05, type: "square", volume: 0.04 },
+                    { frequency: 420, duration: 0.07, type: "triangle", volume: 0.03 }
+                ],
+                swordCrit: [
+                    { frequency: 720, duration: 0.05, type: "square", volume: 0.045 },
+                    { frequency: 980, duration: 0.08, type: "triangle", volume: 0.05 }
+                ],
+                swordBlock: [
+                    { frequency: 760, duration: 0.06, type: "square", volume: 0.05 },
+                    { frequency: 940, duration: 0.08, type: "triangle", volume: 0.04 }
+                ],
+                perfectParry: [
+                    { frequency: 980, duration: 0.05, type: "triangle", volume: 0.05 },
+                    { frequency: 1320, duration: 0.08, type: "triangle", volume: 0.045 }
+                ],
+                enemyAttack: [
+                    { frequency: 210, duration: 0.09, type: "sawtooth", volume: 0.05 },
+                    { frequency: 170, duration: 0.1, type: "sawtooth", volume: 0.04 }
+                ],
+                enemyCrit: [
+                    { frequency: 180, duration: 0.08, type: "sawtooth", volume: 0.055 },
+                    { frequency: 140, duration: 0.12, type: "square", volume: 0.05 }
+                ],
+                enemyBlock: [
+                    { frequency: 300, duration: 0.06, type: "square", volume: 0.045 },
+                    { frequency: 520, duration: 0.09, type: "triangle", volume: 0.035 }
+                ],
+                win: [
+                    { frequency: 523.25, duration: 0.1, type: "triangle", volume: 0.06 },
+                    { frequency: 659.25, duration: 0.12, type: "triangle", volume: 0.065 },
+                    { frequency: 783.99, duration: 0.16, type: "triangle", volume: 0.07 }
+                ],
+                lose: [
+                    { frequency: 392, duration: 0.12, type: "sawtooth", volume: 0.055 },
+                    { frequency: 311.13, duration: 0.14, type: "sawtooth", volume: 0.05 },
+                    { frequency: 196, duration: 0.2, type: "sawtooth", volume: 0.05 }
+                ],
+                shopOpen: [
+                    { frequency: 293.66, duration: 0.08, type: "triangle", volume: 0.05 },
+                    { frequency: 369.99, duration: 0.08, type: "triangle", volume: 0.05 },
+                    { frequency: 440, duration: 0.12, type: "triangle", volume: 0.055 }
+                ],
+                upgrade: [
+                    { frequency: 660, duration: 0.04, type: "square", volume: 0.04 },
+                    { frequency: 540, duration: 0.04, type: "square", volume: 0.04 },
+                    { frequency: 880, duration: 0.08, type: "triangle", volume: 0.05 }
+                ]
+            };
+
+            if (sounds[name]) {
+                playToneSequence(sounds[name]);
+            }
+        }
+
+        function resetSwordyPose() {
+            swordyPose = "ready";
+            swordyX = 165;
+            swordyY = 322;
+            swordyFallAngle = 0;
+        }
+
+        function isBossRoom(nextRoom) {
+            return nextRoom === 10 || nextRoom === 20 || nextRoom === 30;
+        }
+
+        function createBossEnemy(nextRoom) {
+            if (nextRoom === 10) {
+                return {
+                    name: "Red Dragon",
+                    hp: 520,
+                    maxHp: 520,
+                    dmg: 30,
+                    speed: 1850,
+                    lastAttack: performance.now(),
+                    windup: false,
+                    windupTime: 0,
+                    color: "#c43d2b",
+                    modifier: null,
+                    parryLimit: 5,
+                    parryCount: 0,
+                    parryWindow: 0,
+                    isBoss: true,
+                    bossNumber: 1,
+                    centerX: 670,
+                    centerY: 210,
+                    ringRadius: 98,
+                    popupX: 700,
+                    popupY: 100
+                };
+            }
+
+            if (nextRoom === 20) {
+                return {
+                    name: "Blue Kraken",
+                    hp: 700,
+                    maxHp: 700,
+                    dmg: 38,
+                    speed: 1700,
+                    lastAttack: performance.now(),
+                    windup: false,
+                    windupTime: 0,
+                    color: "#3276c9",
+                    modifier: null,
+                    parryLimit: 6,
+                    parryCount: 0,
+                    parryWindow: 0,
+                    isBoss: true,
+                    bossNumber: 2,
+                    centerX: 670,
+                    centerY: 230,
+                    ringRadius: 104,
+                    popupX: 700,
+                    popupY: 100
+                };
+            }
+
+            return {
+                name: "Mouse",
+                hp: 260,
+                maxHp: 260,
+                dmg: 18,
+                speed: 650,
+                lastAttack: performance.now(),
+                windup: false,
+                windupTime: 0,
+                color: "#b8b8b8",
+                modifier: null,
+                parryLimit: 4,
+                parryCount: 0,
+                parryWindow: 0,
+                isBoss: true,
+                bossNumber: 3,
+                centerX: 660,
+                centerY: 252,
+                ringRadius: 42,
+                popupX: 680,
+                popupY: 170
+            };
+        }
+
+        function addDamagePopup(target, amount, isCritical) {
+            const positions = {
+                swordy: { x: swordyX - 5, y: swordyY - 115 },
+                enemy: { x: enemy ? enemy.popupX : 720, y: enemy ? enemy.popupY : 120 }
+            };
+            const position = positions[target];
+            damagePopups.push({
+                x: position.x,
+                y: position.y,
+                amount,
+                isCritical,
+                life: 1
+            });
+        }
+
+        function startRun() {
+            player = {
+                maxHp: 100 + save.upgrades.health * 20,
+                hp: 100 + save.upgrades.health * 20,
+                dmg: 10 + save.upgrades.damage * 3,
+                speed: Math.max(250, 800 - save.upgrades.speed * 50),
+                lastAttack: 0,
+                parryLimit: 2 + save.upgrades.parry,
+                parryCount: 0,
+                parryWindow: 0,
+                attackFlashUntil: 0
+            };
+
+            room = 1;
+            combo = 0;
+            totalFlakes = 0;
+            currentShopJoke = "";
+            resetSwordyPose();
+            hammerX = 300;
+            damagePopups = [];
+            swordyParrySuccessUntil = 0;
+            enemyParrySuccessUntil = 0;
+            spawnEnemy();
+            state = "combat";
+            renderedState = "";
+            playSound("start");
+        }
+
+        function spawnEnemy() {
+            if (isBossRoom(room)) {
+                enemy = createBossEnemy(room);
+                return;
+            }
+
+            const types = [
+                { name: "Goblin", hp: 50, dmg: 8, speed: 1500, color: "#4ea64e" },
+                { name: "Skeleton", hp: 70, dmg: 10, speed: 1700, color: "#d8d8d8" },
+                { name: "Orc", hp: 100, dmg: 15, speed: 2200, color: "#2d7c49" },
+                { name: "Slime", hp: 120, dmg: 6, speed: 2000, color: "#84d96d" }
+            ];
+
+            const type = types[Math.floor(Math.random() * types.length)];
+            const heavy = Math.random() < 0.22;
+            const fast = !heavy && Math.random() < 0.3;
+
+            enemy = {
+                name: type.name,
+                hp: type.hp + room * 15 + (heavy ? 45 : 0),
+                maxHp: type.hp + room * 15 + (heavy ? 45 : 0),
+                dmg: type.dmg + room * 2 + (heavy ? 7 : 0),
+                speed: Math.max(600, type.speed - room * 20 + (heavy ? 450 : 0)),
+                lastAttack: performance.now(),
+                windup: false,
+                windupTime: 0,
+                color: heavy ? "#8b7b43" : type.color,
+                modifier: heavy ? "heavy" : (fast ? "fast" : null),
+                parryLimit: 2 + Math.min(3, Math.floor(room / 3)) + (heavy ? 2 : 0),
+                parryCount: 0,
+                parryWindow: 0,
+                isBoss: false,
+                bossNumber: 0,
+                centerX: 615,
+                centerY: 208,
+                ringRadius: 72,
+                popupX: 720,
+                popupY: 120
+            };
+
+            if (enemy.modifier === "fast") {
+                enemy.speed *= 0.7;
+            }
+        }
+
+        function selectShopJoke() {
+            currentShopJoke = shopJokes[Math.floor(Math.random() * shopJokes.length)];
+        }
+
+        function triggerShopOpen() {
+            selectShopJoke();
+            state = "shop";
+            renderedState = "";
+            hammerSwing = 0;
+            hammerX = 670;
+            swordyPose = "ready";
+            swordyX = 165;
+            swordyY = 300;
+            swordyFallAngle = 0;
+            playSound("shopOpen");
+        }
+
+        function beginShopTransition() {
+            swordyPose = "ready";
+            swordyFallAngle = 0;
+            swordyX = 165;
+            swordyY = 322;
+            triggerShopOpen();
+        }
+
+        function attack() {
+            if (state !== "combat") {
+                return;
+            }
+
+            const now = performance.now();
+            if (now - player.lastAttack < player.speed || player.parryWindow > now) {
+                return;
+            }
+
+            player.lastAttack = now;
+            player.attackFlashUntil = now + 160;
+
+            if (enemy.parryWindow > now) {
+                combo = 0;
+                enemyParrySuccessUntil = now + 220;
+                playSound("swordAttack");
+                playSound("enemyBlock");
+                return;
+            }
+
+            const parryChance = enemy.isBoss ? 0.42 : 0.34;
+            if (enemy.parryCount < enemy.parryLimit && !enemy.windup && Math.random() < parryChance) {
+                enemy.parryCount++;
+                enemy.parryWindow = now + 400;
+                enemyParrySuccessUntil = now + 220;
+                combo = 0;
+                playSound("swordAttack");
+                playSound("enemyBlock");
+                return;
+            }
+
+            const crit = Math.random() < 0.1;
+            const damage = player.dmg * (crit ? 2 : 1);
+            playSound(crit ? "swordCrit" : "swordAttack");
+            enemy.hp -= damage;
+            combo++;
+            player.parryCount = Math.max(0, player.parryCount - 1);
+            addDamagePopup("enemy", damage, crit);
+
+            if (enemy.hp <= 0) {
+                const gained = enemy.isBoss ? Math.floor(80 + room * 8) : Math.floor(10 + room * 5 + combo * 2);
+                save.flakes += gained;
+                totalFlakes += gained;
+                const defeatedBossNumber = enemy.bossNumber;
+                room++;
+                combo = 0;
+                saveGame();
+                if (defeatedBossNumber === 3) {
+                    state = "victory";
+                    renderedState = "";
+                    swordyPose = "fallen";
+                    swordyX = canvas.width / 2;
+                    swordyY = 290;
+                    swordyFallAngle = Math.PI;
+                    playSound("win");
+                } else {
+                    playSound("win");
+                    spawnEnemy();
+                }
+            }
+        }
+
+        function parry() {
+            if (state !== "combat" || player.parryCount >= player.parryLimit) {
+                return;
+            }
+
+            const now = performance.now();
+            if (player.parryWindow > now || now - player.lastAttack < player.speed * 0.35) {
+                return;
+            }
+
+            player.parryCount++;
+            player.parryWindow = now + 400;
+            playSound("swordBlock");
+        }
+
+        function buy(type) {
+            const level = save.upgrades[type];
+            if (level >= 10) {
+                return;
+            }
+
+            const cost = Math.floor(20 * Math.pow(1.5, level));
+            if (save.flakes >= cost) {
+                save.flakes -= cost;
+                save.upgrades[type]++;
+                hammerSwing = 0.55;
+                saveGame();
+                renderedState = "";
+                playSound("upgrade");
+            }
+        }
+
+        function renderUi() {
+            if (renderedState === state) {
+                return;
+            }
+
+            if (state === "menu") {
+                ui.innerHTML = "<button type='button' data-action='start'>Start Adventure</button>";
+            } else if (state === "combat") {
+                ui.innerHTML = [
+                    "<button type='button' data-action='attack'>Attack</button>",
+                    "<button type='button' data-action='parry'>Parry</button>"
+                ].join("");
+            } else if (state === "gameOver") {
+                ui.innerHTML = [
+                    "<h2>Game Over</h2>",
+                    "<p>Rooms cleared: " + room + "</p>",
+                    "<p>Flakes earned this run: " + totalFlakes + "</p>",
+                    "<button type='button' data-action='shop'>Visit Shop</button>",
+                    "<button type='button' data-action='start'>Try Again</button>"
+                ].join("");
+            } else if (state === "shop") {
+                const cost = (level) => Math.floor(20 * Math.pow(1.5, level));
+                ui.innerHTML = [
+                    "<h2>Blacksmith</h2>",
+                    "<p>Flakes: " + save.flakes + "</p>",
+                    "<button type='button' data-buy='damage'>Damage Lv " + save.upgrades.damage + " (" + cost(save.upgrades.damage) + ")</button>",
+                    "<button type='button' data-buy='speed'>Speed Lv " + save.upgrades.speed + " (" + cost(save.upgrades.speed) + ")</button>",
+                    "<button type='button' data-buy='parry'>Parry Lv " + save.upgrades.parry + " (" + cost(save.upgrades.parry) + ")</button>",
+                    "<button type='button' data-buy='health'>Health Lv " + save.upgrades.health + " (" + cost(save.upgrades.health) + ")</button>",
+                    "<button type='button' data-action='start'>Start Run</button>"
+                ].join("");
+            } else if (state === "victory") {
+                ui.innerHTML = "<button type='button' data-action='reset'>Play again?</button>";
+            }
+
+            renderedState = state;
+        }
+
+        function drawBar(x, y, width, height, value, max, color) {
+            ctx.fillStyle = "#5d4a43";
+            ctx.fillRect(x, y, width, height);
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width * Math.max(0, value / max), height);
+        }
+
+        function update() {
+            const now = performance.now();
+
+            if (state === "combat") {
+                if (now - enemy.lastAttack > enemy.speed && !enemy.windup && enemy.parryWindow <= now) {
+                    enemy.windup = true;
+                    enemy.windupTime = now + 500;
+                    enemy.lastAttack = now;
+                }
+
+                if (enemy.windup && now > enemy.windupTime) {
+                    enemy.windup = false;
+
+                    if (player.parryWindow > now) {
+                        swordyParrySuccessUntil = now + 220;
+                        playSound("perfectParry");
+                    } else {
+                        const crit = Math.random() < 0.12;
+                        const damage = enemy.dmg * (crit ? 2 : 1);
+                        playSound(crit ? "enemyCrit" : "enemyAttack");
+                        player.hp -= damage;
+                        combo = 0;
+                        addDamagePopup("swordy", damage, crit);
+                        if (player.hp <= 0) {
+                            state = "gameOver";
+                            renderedState = "";
+                            swordyPose = "fallen";
+                            swordyFallAngle = Math.PI / 2;
+                            playSound("lose");
+                            saveGame();
+                        }
+                    }
+                }
+
+                if (player.parryWindow < now) {
+                    player.parryWindow = 0;
+                }
+                if (enemy.parryWindow < now) {
+                    enemy.parryWindow = 0;
+                }
+            }
+
+            if (hammerSwing > 0) {
+                hammerSwing = Math.max(0, hammerSwing - 0.04);
+            }
+
+            damagePopups = damagePopups
+                .map((popup) => ({
+                    ...popup,
+                    y: popup.y - 0.7,
+                    life: popup.life - 0.02
+                }))
+                .filter((popup) => popup.life > 0);
+        }
+
+        function renderMenu() {
+            ctx.fillStyle = "#fff7eb";
+            ctx.font = "700 42px Arial";
+            ctx.textAlign = "center";
+            ctx.font = "22px Arial";
+            ctx.fillStyle = "#ffd793";
+            ctx.fillText("Use the buttons below to attack and parry.", canvas.width / 2, 230);
+            ctx.fillText("Press Start Adventure below to begin.", canvas.width / 2, 270);
+            ctx.textAlign = "left";
+        }
+
+        function drawSwordy() {
+            const now = performance.now();
+            const flash = player && player.attackFlashUntil > now;
+            const bladeColor = flash ? "#ff6a6a" : "#cfd4dc";
+
+            ctx.save();
+            ctx.translate(swordyX, swordyY);
+            ctx.rotate(swordyFallAngle);
+
+            if (swordyPose === "walk") {
+                ctx.fillStyle = "#f5f5f5";
+                ctx.fillRect(-10, -95, 18, 100);
+                ctx.fillRect(-24, -12, 26, 10);
+            } else {
+                ctx.fillStyle = bladeColor;
+                ctx.fillRect(-10, -105, 20, 116);
+                ctx.fillStyle = flash ? "#ffb0b0" : "#fff";
+                ctx.fillRect(-24, -18, 50, 12);
+                ctx.fillRect(-3, -88, 6, 22);
+            }
+
+            ctx.restore();
+
+            if (player && player.parryWindow > now) {
+                ctx.strokeStyle = swordyParrySuccessUntil > now ? "#59d46a" : "#f0c36a";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(swordyX, swordyY - 55, 72, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawHammerCharacter(showJoke) {
+            ctx.save();
+            ctx.translate(hammerX, 220);
+            const swing = Math.sin(hammerSwing * Math.PI) * 0.8;
+
+            ctx.fillStyle = "#fff7eb";
+            ctx.font = "700 28px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Sharpen Up at the Forge", -170, -58);
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "#ffd793";
+            ctx.fillText("Spend flakes to survive deeper rooms.", -170, -28);
+
+            if (showJoke && currentShopJoke) {
+                ctx.fillStyle = "rgba(77, 51, 39, 0.92)";
+                ctx.fillRect(-390, 2, 370, 88);
+                ctx.fillStyle = "#fff7eb";
+                ctx.font = "18px Arial";
+                ctx.textAlign = "left";
+                wrapText(currentShopJoke, -370, 31, 330, 22);
+                ctx.textAlign = "center";
+            }
+
+            ctx.fillStyle = "#2b2f38";
+            ctx.fillRect(-22, 28, 10, 68);
+
+            ctx.save();
+            ctx.translate(-6, 34);
+            ctx.rotate(-0.1 + swing);
+            ctx.fillStyle = "#7c5a3c";
+            ctx.fillRect(-5, -18, 12, 74);
+            ctx.fillStyle = "#9ca4af";
+            ctx.fillRect(-28, -28, 58, 24);
+            ctx.fillStyle = "#222";
+            ctx.fillRect(-14, -18, 6, 6);
+            ctx.fillRect(8, -18, 6, 6);
+            ctx.fillRect(-8, -8, 12, 4);
+            ctx.restore();
+
+            ctx.fillStyle = "#a6afba";
+            ctx.fillRect(-56, 100, 92, 20);
+            ctx.beginPath();
+            ctx.moveTo(-36, 120);
+            ctx.lineTo(16, 120);
+            ctx.lineTo(-10, 154);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawDamagePopups() {
+            damagePopups.forEach((popup) => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, popup.life);
+                ctx.font = popup.isCritical ? "700 26px Arial" : "700 22px Arial";
+                ctx.fillStyle = popup.isCritical ? "#ffd34d" : "#ffffff";
+                ctx.fillText("-" + popup.amount, popup.x, popup.y);
+                ctx.restore();
+            });
+        }
+
+        function wrapText(text, x, y, maxWidth, lineHeight) {
+            const words = text.split(" ");
+            let line = "";
+            let offsetY = 0;
+
+            words.forEach((word) => {
+                const testLine = line ? line + " " + word : word;
+                if (ctx.measureText(testLine).width > maxWidth && line) {
+                    ctx.fillText(line, x, y + offsetY);
+                    line = word;
+                    offsetY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            });
+
+            if (line) {
+                ctx.fillText(line, x, y + offsetY);
+            }
+        }
+
+        function drawSlime() {
+            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.fillRect(560, 150, 110, 110);
+            ctx.fillStyle = "#222";
+            ctx.fillRect(585, 178, 12, 12);
+            ctx.fillRect(623, 178, 12, 12);
+            ctx.fillRect(595, 220, 30, 8);
+        }
+
+        function drawSkeleton() {
+            ctx.fillStyle = enemy.windup ? "#f2c9c9" : enemy.color;
+            ctx.beginPath();
+            ctx.arc(615, 198, 52, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(585, 228, 60, 38);
+            ctx.fillStyle = "#222";
+            ctx.beginPath();
+            ctx.arc(595, 188, 10, 0, Math.PI * 2);
+            ctx.arc(635, 188, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(607, 205, 16, 12);
+            ctx.fillRect(592, 235, 46, 8);
+        }
+
+        function drawGoblin() {
+            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.beginPath();
+            ctx.moveTo(610, 142);
+            ctx.lineTo(575, 185);
+            ctx.lineTo(565, 248);
+            ctx.lineTo(610, 282);
+            ctx.lineTo(655, 248);
+            ctx.lineTo(645, 185);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#222";
+            ctx.fillRect(590, 190, 10, 14);
+            ctx.fillRect(620, 190, 10, 14);
+            ctx.fillRect(598, 228, 24, 8);
+        }
+
+        function drawOrc() {
+            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
+            ctx.beginPath();
+            ctx.moveTo(576, 140);
+            ctx.lineTo(660, 140);
+            ctx.quadraticCurveTo(688, 140, 688, 168);
+            ctx.lineTo(688, 250);
+            ctx.quadraticCurveTo(688, 278, 660, 278);
+            ctx.lineTo(576, 278);
+            ctx.quadraticCurveTo(548, 278, 548, 250);
+            ctx.lineTo(548, 168);
+            ctx.quadraticCurveTo(548, 140, 576, 140);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#222";
+            ctx.fillRect(582, 188, 16, 16);
+            ctx.fillRect(632, 188, 16, 16);
+            ctx.fillRect(600, 224, 38, 10);
+        }
+
+        function drawDragon() {
+            ctx.fillStyle = enemy.windup ? "#ef5a47" : enemy.color;
+            ctx.beginPath();
+            ctx.moveTo(560, 260);
+            ctx.lineTo(588, 162);
+            ctx.lineTo(648, 122);
+            ctx.lineTo(720, 136);
+            ctx.lineTo(782, 182);
+            ctx.lineTo(790, 238);
+            ctx.lineTo(748, 286);
+            ctx.lineTo(652, 298);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#8d2218";
+            ctx.beginPath();
+            ctx.moveTo(626, 136);
+            ctx.lineTo(650, 90);
+            ctx.lineTo(672, 140);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(688, 144);
+            ctx.lineTo(714, 102);
+            ctx.lineTo(728, 156);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#222";
+            ctx.fillRect(626, 184, 14, 14);
+            ctx.fillRect(690, 174, 14, 14);
+            ctx.fillRect(656, 228, 52, 10);
+        }
+
+        function drawKraken() {
+            ctx.fillStyle = enemy.windup ? "#5f9dff" : enemy.color;
+            ctx.beginPath();
+            ctx.arc(670, 188, 76, Math.PI, 0);
+            ctx.lineTo(746, 238);
+            ctx.lineTo(594, 238);
+            ctx.closePath();
+            ctx.fill();
+            for (let i = 0; i < 5; i++) {
+                const baseX = 610 + i * 28;
+                ctx.beginPath();
+                ctx.moveTo(baseX, 238);
+                ctx.quadraticCurveTo(baseX - 18, 290, baseX + 6, 326);
+                ctx.quadraticCurveTo(baseX + 36, 294, baseX + 18, 244);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.fillStyle = "#d7efff";
+            ctx.fillRect(630, 172, 16, 16);
+            ctx.fillRect(692, 172, 16, 16);
+            ctx.fillStyle = "#222";
+            ctx.fillRect(636, 178, 6, 6);
+            ctx.fillRect(698, 178, 6, 6);
+        }
+
+        function drawMouseBoss() {
+            ctx.fillStyle = enemy.windup ? "#e3b6b6" : enemy.color;
+            ctx.beginPath();
+            ctx.arc(660, 252, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(648, 238, 10, 0, Math.PI * 2);
+            ctx.arc(672, 238, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#222";
+            ctx.fillRect(654, 250, 4, 4);
+            ctx.fillRect(664, 250, 4, 4);
+            ctx.fillRect(660, 260, 6, 4);
+            ctx.strokeStyle = "#d9b3b3";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(678, 258);
+            ctx.quadraticCurveTo(700, 248, 714, 274);
+            ctx.stroke();
+        }
+
+        function drawEnemy() {
+            if (enemy.isBoss && enemy.bossNumber === 1) {
+                drawDragon();
+            } else if (enemy.isBoss && enemy.bossNumber === 2) {
+                drawKraken();
+            } else if (enemy.isBoss && enemy.bossNumber === 3) {
+                drawMouseBoss();
+            } else if (enemy.name === "Skeleton") {
+                drawSkeleton();
+            } else if (enemy.name === "Goblin") {
+                drawGoblin();
+            } else if (enemy.name === "Orc") {
+                drawOrc();
+            } else {
+                drawSlime();
+            }
+
+            if (enemy.parryWindow > performance.now()) {
+                ctx.strokeStyle = enemyParrySuccessUntil > performance.now() ? "#59d46a" : "#f0c36a";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(enemy.centerX, enemy.centerY, enemy.ringRadius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function renderCombat() {
+            ctx.fillStyle = "#fff7eb";
+            ctx.font = "700 30px Arial";
+            ctx.fillText("Room: " + room, 25, 38);
+            ctx.font = "22px Arial";
+            ctx.fillText("Flakes: " + save.flakes, 25, 65);
+            ctx.fillText("Combo: " + combo, 25, 95);
+            ctx.fillText("Parries Left: " + (player.parryLimit - player.parryCount), 25, 125);
+            ctx.fillText("Enemy Blocks Left: " + (enemy.parryLimit - enemy.parryCount), 585, 35);
+
+            drawBar(70, 372, 260, 20, player.hp, player.maxHp, "#d65656");
+            drawBar(590, 70, 260, 22, enemy.hp, enemy.maxHp, "#63b95c");
+            ctx.fillText("HP: " + player.hp + "/" + player.maxHp, 70, 364);
+            ctx.fillText("HP: " + enemy.hp + "/" + enemy.maxHp, 590, 62);
+
+            ctx.fillStyle = "#fff";
+            ctx.fillText("Swordy", 115, 390);
+            const modifierText = enemy.isBoss ? " (Boss)" : (enemy.modifier ? " (" + enemy.modifier.charAt(0).toUpperCase() + enemy.modifier.slice(1) + ")" : "");
+            ctx.fillText(enemy.name + modifierText, 590, 116);
+
+            drawSwordy();
+            drawEnemy();
+            drawDamagePopups();
+        }
+
+        function renderGameOver() {
+            ctx.fillStyle = "#fff7eb";
+            ctx.font = "700 44px Arial";
+            ctx.fillText("Swordy Has Fallen", 220, 120);
+            ctx.font = "24px Arial";
+            ctx.fillStyle = "#ffd793";
+            ctx.fillText("Restock, upgrade, and take another run.", 215, 165);
+            drawSwordy();
+            drawDamagePopups();
+        }
+
+        function renderVictory() {
+            ctx.fillStyle = "#fff7eb";
+            ctx.font = "700 34px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Congratulations! Swordy the Sword has slain every foe,", canvas.width / 2, 82);
+            ctx.fillText("and awaits the arrival of King Arthur to grant him new life.", canvas.width / 2, 122);
+            ctx.textAlign = "left";
+
+            ctx.fillStyle = "#7f7f85";
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, 330, 88, Math.PI, 0);
+            ctx.lineTo(canvas.width / 2 + 88, 330);
+            ctx.lineTo(canvas.width / 2 - 88, 330);
+            ctx.closePath();
+            ctx.fill();
+            drawSwordy();
+        }
+
+        function renderShop() {
+            drawHammerCharacter(true);
+            drawSwordy();
+        }
+
+        function draw() {
+            renderUi();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#2b2f38";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (state === "menu") {
+                renderMenu();
+            } else if (state === "combat") {
+                renderCombat();
+            } else if (state === "gameOver") {
+                renderGameOver();
+            } else if (state === "shop") {
+                renderShop();
+            } else if (state === "victory") {
+                renderVictory();
+            }
+        }
+
+        function fullResetGame() {
+            save = {
+                flakes: 0,
+                upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
+            };
+            localStorage.removeItem("swordySave");
+            player = undefined;
+            enemy = undefined;
+            room = 1;
+            combo = 0;
+            totalFlakes = 0;
+            currentShopJoke = "";
+            damagePopups = [];
+            swordyParrySuccessUntil = 0;
+            enemyParrySuccessUntil = 0;
+            hammerSwing = 0;
+            hammerX = 300;
+            resetSwordyPose();
+            state = "menu";
+            renderedState = "";
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        ui.addEventListener("click", (event) => {
+            const button = event.target.closest("button");
+            if (!button) {
+                return;
+            }
+
+            const action = button.dataset.action;
+            const purchaseType = button.dataset.buy;
+
+            getAudioContext();
+
+            if (action === "start") {
+                startRun();
+            } else if (action === "attack") {
+                attack();
+            } else if (action === "parry") {
+                parry();
+            } else if (action === "shop") {
+                beginShopTransition();
+            } else if (action === "reset") {
+                fullResetGame();
+            } else if (purchaseType) {
+                buy(purchaseType);
+            }
+        });
+
+        draw();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
