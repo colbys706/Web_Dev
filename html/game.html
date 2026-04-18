@@ -422,25 +422,25 @@ IS201
             const types = [
                 { name: "Goblin", hp: 40, dmg: 8, speed: 1500, color: "#4ea64e" },
                 { name: "Skeleton", hp: 60, dmg: 10, speed: 1700, color: "#d8d8d8" },
-                { name: "Orc", hp: 75, dmg: 15, speed: 2200, color: "#2d7c49" },
-                { name: "Slime", hp: 90, dmg: 6, speed: 2000, color: "#84d96d" }
+                { name: "Orc", hp: 75, dmg: 18, speed: 2250, color: "#2d7c49" },
+                { name: "Slime", hp: 100, dmg: 5, speed: 2000, color: "#84d96d" }
             ];
 
             const type = types[Math.floor(Math.random() * types.length)];
-            const heavy = Math.random() < 0.22;
-            const fast = !heavy && Math.random() < 0.3;
+            const heavy = Math.random() < 0.26;
+            const fast = !heavy && Math.random() < 0.34;
 
             enemy = {
                 name: type.name,
                 <!--on this line, (heavy ? ) is asking if they are heavy.-->
                 hp: type.hp + (room-1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
                 maxHp: type.hp + (room - 1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
-                dmg: type.dmg + room * 2 + (heavy ? 3*room : 0),
-                speed: Math.max(600, type.speed - room * 20 * (heavy ? 1.25 : fast ? 0.7 : 1)),
+                dmg: type.dmg + room * 2 + (heavy ? 3*room : fast? -2*room : 0),
+                speed: Math.max(600, type.speed - room * 30 * (heavy ? 1.25 : fast ? 0.7 : 1)),
                 lastAttack: performance.now(),
                 windup: false,
                 windupTime: 0,
-                color: heavy ? "#8b7b43" : type.color,
+                color: heavy ? "#4f4f4f" : fast ? "#b3b3b3": type.color,
                 modifier: heavy ? "heavy" : (fast ? "fast" : null),
                 parryLimit: 2 + Math.min(3, Math.floor(room / 3)) + (heavy ? 2 : fast ? -2 : 0),
                 parryCount: 0,
@@ -560,7 +560,7 @@ IS201
 
         function buy(type) {
             const level = save.upgrades[type];
-            if (level >= 10) {
+            if (level >= 12) {
                 return;
             }
 
@@ -689,7 +689,7 @@ IS201
         function drawSwordy() {
             const now = performance.now();
             const flash = player && player.attackFlashUntil > now;
-            const bladeColor = flash ? "#ff6a6a" : "#cfd4dc";
+            const bladeColor = flash ? "#FC5151" : "#94999C";
 
             ctx.save();
             ctx.translate(swordyX, swordyY);
@@ -810,7 +810,7 @@ IS201
         }
 
         function drawSkeleton() {
-            ctx.fillStyle = enemy.windup ? "#f2c9c9" : enemy.color;
+            ctx.fillStyle = enemy.windup ? "#d64545" : enemy.color;
             ctx.beginPath();
             ctx.arc(615, 198, 52, 0, Math.PI * 2);
             ctx.fill();
