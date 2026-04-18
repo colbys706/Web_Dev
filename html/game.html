@@ -111,7 +111,7 @@ IS201
 
     <main class="game-shell">
         <h1 class="game-title">Swordy the Sword</h1>
-        <p class="game-subtitle">Fight through rooms, time your parries, and spend your flakes at the blacksmith.</p>
+        <p class="game-subtitle">Fight through rooms, time your parries, and spend your shards at the blacksmith.</p>
 
         <canvas id="game" width="920" height="420"></canvas>
         <div id="ui"></div>
@@ -139,7 +139,7 @@ IS201
         let enemy;
         let room = 1;
         let combo = 0;
-        let totalFlakes = 0;
+        let totalShards = 0;
         let swordyPose = "ready";
         let swordyX = 165;
         let swordyY = 322;
@@ -167,12 +167,12 @@ IS201
         let save;
         try {
             save = JSON.parse(localStorage.getItem("swordySave")) || {
-                flakes: 0,
+                shards: 0,
                 upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
             };
         } catch (error) {
             save = {
-                flakes: 0,
+                shards: 0,
                 upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
             };
         }
@@ -292,17 +292,17 @@ IS201
         }
 
         function isBossRoom(nextRoom) {
-            return nextRoom === 10 || nextRoom === 20 || nextRoom === 30;
+            return nextRoom === 5 || nextRoom === 10 || nextRoom === 15;
         }
 
         function createBossEnemy(nextRoom) {
             if (nextRoom === 10) {
                 return {
                     name: "Red Dragon",
-                    hp: 520,
-                    maxHp: 520,
-                    dmg: 30,
-                    speed: 1850,
+                    hp: 550,
+                    maxHp: 550,
+                    dmg: 70,
+                    speed: 3200,
                     lastAttack: performance.now(),
                     windup: false,
                     windupTime: 0,
@@ -321,13 +321,13 @@ IS201
                 };
             }
 
-            if (nextRoom === 20) {
+            if (nextRoom === 5) {
                 return {
                     name: "Blue Kraken",
-                    hp: 700,
-                    maxHp: 700,
-                    dmg: 38,
-                    speed: 1700,
+                    hp: 300,
+                    maxHp: 300,
+                    dmg: 35,
+                    speed: 1350,
                     lastAttack: performance.now(),
                     windup: false,
                     windupTime: 0,
@@ -348,16 +348,16 @@ IS201
 
             return {
                 name: "Mouse",
-                hp: 260,
-                maxHp: 260,
+                hp: 160,
+                maxHp: 160,
                 dmg: 18,
-                speed: 650,
+                speed: 700,
                 lastAttack: performance.now(),
                 windup: false,
                 windupTime: 0,
                 color: "#b8b8b8",
                 modifier: null,
-                parryLimit: 4,
+                parryLimit: 30,
                 parryCount: 0,
                 parryWindow: 0,
                 isBoss: true,
@@ -400,7 +400,7 @@ IS201
 
             room = 1;
             combo = 0;
-            totalFlakes = 0;
+            totalShards = 0;
             currentShopJoke = "";
             resetSwordyPose();
             hammerX = 300;
@@ -420,10 +420,10 @@ IS201
             }
 
             const types = [
-                { name: "Goblin", hp: 50, dmg: 8, speed: 1500, color: "#4ea64e" },
-                { name: "Skeleton", hp: 70, dmg: 10, speed: 1700, color: "#d8d8d8" },
-                { name: "Orc", hp: 100, dmg: 15, speed: 2200, color: "#2d7c49" },
-                { name: "Slime", hp: 120, dmg: 6, speed: 2000, color: "#84d96d" }
+                { name: "Goblin", hp: 40, dmg: 8, speed: 1500, color: "#4ea64e" },
+                { name: "Skeleton", hp: 60, dmg: 10, speed: 1700, color: "#d8d8d8" },
+                { name: "Orc", hp: 75, dmg: 15, speed: 2200, color: "#2d7c49" },
+                { name: "Slime", hp: 90, dmg: 6, speed: 2000, color: "#84d96d" }
             ];
 
             const type = types[Math.floor(Math.random() * types.length)];
@@ -432,16 +432,17 @@ IS201
 
             enemy = {
                 name: type.name,
-                hp: type.hp + room * 15 + (heavy ? 45 : 0),
-                maxHp: type.hp + room * 15 + (heavy ? 45 : 0),
-                dmg: type.dmg + room * 2 + (heavy ? 7 : 0),
-                speed: Math.max(600, type.speed - room * 20 + (heavy ? 450 : 0)),
+                <!--on this line, (heavy ? ) is asking if they are heavy.-->
+                hp: type.hp + (room-1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
+                maxHp: type.hp + (room - 1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
+                dmg: type.dmg + room * 2 + (heavy ? 3*room : 0),
+                speed: Math.max(600, type.speed - room * 20 * (heavy ? 1.25 : fast ? 0.7 : 1)),
                 lastAttack: performance.now(),
                 windup: false,
                 windupTime: 0,
                 color: heavy ? "#8b7b43" : type.color,
                 modifier: heavy ? "heavy" : (fast ? "fast" : null),
-                parryLimit: 2 + Math.min(3, Math.floor(room / 3)) + (heavy ? 2 : 0),
+                parryLimit: 2 + Math.min(3, Math.floor(room / 3)) + (heavy ? 2 : fast ? -2 : 0),
                 parryCount: 0,
                 parryWindow: 0,
                 isBoss: false,
@@ -452,10 +453,6 @@ IS201
                 popupX: 720,
                 popupY: 120
             };
-
-            if (enemy.modifier === "fast") {
-                enemy.speed *= 0.7;
-            }
         }
 
         function selectShopJoke() {
@@ -525,8 +522,8 @@ IS201
 
             if (enemy.hp <= 0) {
                 const gained = enemy.isBoss ? Math.floor(80 + room * 8) : Math.floor(10 + room * 5 + combo * 2);
-                save.flakes += gained;
-                totalFlakes += gained;
+                save.shards += gained;
+                totalShards += gained;
                 const defeatedBossNumber = enemy.bossNumber;
                 room++;
                 combo = 0;
@@ -568,8 +565,8 @@ IS201
             }
 
             const cost = Math.floor(20 * Math.pow(1.5, level));
-            if (save.flakes >= cost) {
-                save.flakes -= cost;
+            if (save.shards >= cost) {
+                save.shards -= cost;
                 save.upgrades[type]++;
                 hammerSwing = 0.55;
                 saveGame();
@@ -594,7 +591,7 @@ IS201
                 ui.innerHTML = [
                     "<h2>Game Over</h2>",
                     "<p>Rooms cleared: " + room + "</p>",
-                    "<p>Flakes earned this run: " + totalFlakes + "</p>",
+                    "<p>Shards earned this run: " + totalShards + "</p>",
                     "<button type='button' data-action='shop'>Visit Shop</button>",
                     "<button type='button' data-action='start'>Try Again</button>"
                 ].join("");
@@ -602,7 +599,7 @@ IS201
                 const cost = (level) => Math.floor(20 * Math.pow(1.5, level));
                 ui.innerHTML = [
                     "<h2>Blacksmith</h2>",
-                    "<p>Flakes: " + save.flakes + "</p>",
+                    "<p>Shards: " + save.shards + "</p>",
                     "<button type='button' data-buy='damage'>Damage Lv " + save.upgrades.damage + " (" + cost(save.upgrades.damage) + ")</button>",
                     "<button type='button' data-buy='speed'>Speed Lv " + save.upgrades.speed + " (" + cost(save.upgrades.speed) + ")</button>",
                     "<button type='button' data-buy='parry'>Parry Lv " + save.upgrades.parry + " (" + cost(save.upgrades.parry) + ")</button>",
@@ -732,7 +729,7 @@ IS201
             ctx.fillText("Sharpen Up at the Forge", -170, -58);
             ctx.font = "20px Arial";
             ctx.fillStyle = "#ffd793";
-            ctx.fillText("Spend flakes to survive deeper rooms.", -170, -28);
+            ctx.fillText("Spend shards to survive deeper rooms.", -170, -28);
 
             if (showJoke && currentShopJoke) {
                 ctx.fillStyle = "rgba(77, 51, 39, 0.92)";
@@ -973,7 +970,7 @@ IS201
             ctx.font = "700 30px Arial";
             ctx.fillText("Room: " + room, 25, 38);
             ctx.font = "22px Arial";
-            ctx.fillText("Flakes: " + save.flakes, 25, 65);
+            ctx.fillText("Shards: " + save.shards, 25, 65);
             ctx.fillText("Combo: " + combo, 25, 95);
             ctx.fillText("Parries Left: " + (player.parryLimit - player.parryCount), 25, 125);
             ctx.fillText("Enemy Blocks Left: " + (enemy.parryLimit - enemy.parryCount), 585, 35);
@@ -1048,7 +1045,7 @@ IS201
 
         function fullResetGame() {
             save = {
-                flakes: 0,
+                shards: 0,
                 upgrades: { speed: 0, damage: 0, parry: 0, health: 0 }
             };
             localStorage.removeItem("swordySave");
@@ -1056,7 +1053,7 @@ IS201
             enemy = undefined;
             room = 1;
             combo = 0;
-            totalFlakes = 0;
+            totalShards = 0;
             currentShopJoke = "";
             damagePopups = [];
             swordyParrySuccessUntil = 0;
