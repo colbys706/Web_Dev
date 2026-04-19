@@ -299,10 +299,35 @@ IS201
         }
 
         function isBossRoom(nextRoom) {
-            return nextRoom === 5 || nextRoom === 10 || nextRoom === 15;
+            return nextRoom === 5 || nextRoom === 10 || nextRoom === 15 || nextRoom ===20;
         }
 
         function createBossEnemy(nextRoom) {
+            if (nextRoom === 5) {
+                return {
+                    name: "Blue Kraken",
+                    hp: 300,
+                    maxHp: 300,
+                    dmg: 35,
+                    speed: 1250,
+                    lastAttack: performance.now(),
+                    windup: false,
+                    windupTime: 0,
+                    color: "#3276c9",
+                    modifier: null,
+                    parryLimit: 8,
+                    parryCount: 0,
+                    parryWindow: 0,
+                    isBoss: true,
+                    bossNumber: 1,
+                    centerX: 670,
+                    centerY: 230,
+                    ringRadius: 104,
+                    popupX: 700,
+                    popupY: 100
+                };
+            }
+
             if (nextRoom === 10) {
                 return {
                     name: "Red Dragon",
@@ -319,7 +344,7 @@ IS201
                     parryCount: 0,
                     parryWindow: 0,
                     isBoss: true,
-                    bossNumber: 1,
+                    bossNumber: 2,
                     centerX: 670,
                     centerY: 210,
                     ringRadius: 98,
@@ -327,54 +352,55 @@ IS201
                     popupY: 100
                 };
             }
-
-            if (nextRoom === 5) {
+            
+            if (nextRoom === 15) {
                 return {
-                    name: "Blue Kraken",
-                    hp: 300,
-                    maxHp: 300,
-                    dmg: 35,
-                    speed: 1250,
+                    name: "Mouse",
+                    hp: 200,
+                    maxHp: 200,
+                    dmg: 10,
+                    speed: 300,
                     lastAttack: performance.now(),
                     windup: false,
                     windupTime: 0,
-                    color: "#3276c9",
+                    color: "#b8b8b8",
                     modifier: null,
-                    parryLimit: 6,
+                    parryLimit: 0,
                     parryCount: 0,
                     parryWindow: 0,
                     isBoss: true,
-                    bossNumber: 2,
-                    centerX: 670,
-                    centerY: 230,
-                    ringRadius: 104,
-                    popupX: 700,
-                    popupY: 100
+                    bossNumber: 3,
+                    centerX: 660,
+                    centerY: 252,
+                    ringRadius: 42,
+                    popupX: 680,
+                    popupY: 170
                 };
             }
-
-            return {
-                name: "Mouse",
-                hp: 200,
-                maxHp: 200,
-                dmg: 5,
-                speed: 300,
-                lastAttack: performance.now(),
-                windup: false,
-                windupTime: 0,
-                color: "#b8b8b8",
-                modifier: null,
-                parryLimit: 0,
-                parryCount: 0,
-                parryWindow: 0,
-                isBoss: true,
-                bossNumber: 3,
-                centerX: 660,
-                centerY: 252,
-                ringRadius: 42,
-                popupX: 680,
-                popupY: 170
-            };
+            if (nextRoom === 20) {
+                return {
+                    name: "Excalibur",
+                    hp: 100 + save.upgrades.health * 15,
+                    maxHp: 100 + save.upgrades.health * 15,
+                    dmg: 10 + save.upgrades.damage * 2,
+                    speed: Math.max(750, 1500 - save.upgrades.speed * 50), //add math.random()*
+                    lastAttack: performance.now(),
+                    windup: false,
+                    windupTime: 0,
+                    color: "#b8b8b8",
+                    modifier: null,
+                    parryLimit: 2 + save.upgrades.parry,
+                    parryCount: 0,
+                    parryWindow: 0,
+                    isBoss: true,
+                    bossNumber: 4,
+                    centerX: 660,
+                    centerY: 252,
+                    ringRadius: 42,
+                    popupX: 680,
+                    popupY: 170
+                };
+            }
         }
 
         function addDamagePopup(target, amount, isCritical) {
@@ -440,7 +466,7 @@ IS201
 
             enemy = {
                 name: type.name,
-                <!--on this line, (heavy ? ) is asking if they are heavy.-->
+                //on this line, (heavy ? ) is asking if they are heavy.
                 hp: type.hp + (room-1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
                 maxHp: type.hp + (room - 1) * 15 + (heavy ? 10*room : fast ? -10*room : 0),
                 dmg: type.dmg + room * 2 + (heavy ? 3*room : fast? -1*room : 0),
@@ -450,7 +476,7 @@ IS201
                 windupTime: 0,
                 color: heavy && type.name === "Goblin" ? "#657800" : heavy && type.name === "Skeleton" ? "#595959" : heavy && type.name === "Troll" ? "#003954" : heavy && type.name === "Slime" ? "#146600" : fast && type.name === "Goblin"? "#D8FF00" : fast && type.name === "Skeleton"? "#EDEDED" : fast && type.name === "Troll"? "#00B9FF" : fast && type.name === "Slime"? "#2BFF00" : type.color , 
                 modifier: heavy ? "heavy" : fast ? "fast" : null,
-                parryLimit: type.parry + Math.min(1, Math.floor(room / 2)) + (heavy ? 2 : fast ? -1 : 0),
+                parryLimit: type.parry + Math.min(1, Math.floor(room / 3)) + (heavy ? 2 : fast ? 0 : 1),
                 parryCount: 0,
                 parryWindow: 0,
                 isBoss: false,
@@ -508,7 +534,7 @@ IS201
                 playSound("enemyBlock");
                 return;
             }
-// parry chance .42 : 0.34, enemy parry
+            // parry chance .42 : 0.34, enemy parry
             const parryChance = enemy.isBoss ? 0.40 : 0.25;
             // math.random() gives random number between 0 and 1 (1 is excluded)
             if (enemy.parryCount < enemy.parryLimit && !enemy.windup && Math.random() < parryChance) {
@@ -540,12 +566,13 @@ IS201
                 room++;
                 combo = 0;
                 saveGame();
-                if (defeatedBossNumber === 3) {
+                if (defeatedBossNumber === 4) {
                     state = "victory";
                     renderedState = "";
                     swordyPose = "fallen";
                     swordyX = canvas.width / 2;
-                    swordyY = 190;
+                    // sword in the stone position
+                    swordyY = 240; //delta 50
                     swordyFallAngle = Math.PI;
                     playSound("win");
                 } else {
@@ -572,7 +599,8 @@ IS201
 
         function buy(type) {
             const level = save.upgrades[type];
-            if (level >= 12) {
+            //this is the max upgrade level
+            if (level >= 15) {
                 return;
             }
 
@@ -715,14 +743,14 @@ IS201
                 ctx.fillRect(-24, -12, 26, 10);
             } else {
                 // This is swordy's blade
-                const gradient = ctx.createLinearGradient(-10, -105, 20, 90);
+                gradient = ctx.createLinearGradient(-10, -130, 20, 88);
                 //color gradient!
-                gradient.addColorStop(0, "#ADADAD");     // start
-                gradient.addColorStop(0.5, "#CCCCCC"); // middle
-                gradient.addColorStop(1, "#F2F2F2");     // end
-                ctx.fillStyle = gradient;
+                gradient.addColorStop(0, "#9E9E9E");     // top
+                gradient.addColorStop(0.25, "#BDBDBD"); // middle
+                gradient.addColorStop(0.5, "#545454");     // bottom
+                ctx.fillStyle = flash ? "#FF8787" : gradient;
                 // ctx.fillRect(-10, -105, 20, 116); //original blade
-                ctx.fillRect(-10, -105, 20, 90); //shortened blade
+                ctx.fillRect(-10, -105, 20, 88); //shortened blade
                 ctx.beginPath();
                 ctx.moveTo(-10, -105);
                 ctx.lineTo(0, -130);
@@ -982,6 +1010,41 @@ IS201
             ctx.stroke();
         }
 
+        function drawExcalibur() {
+            gradient = ctx.createLinearGradient(640, 120, 670, 338);
+            // Excalibur blade gradient (gold)
+            gradient.addColorStop(0, "#FFF4B0");   // bright gold highlight
+            gradient.addColorStop(0.25, "#FFD700"); // classic gold
+            gradient.addColorStop(0.5, "#C99700");  // deeper gold
+            gradient.addColorStop(0.75, "#8B6500"); // shadowed gold
+
+            ctx.fillStyle = enemy.windup ? "#FF4D4D" : gradient;
+            ctx.fillRect(640, 145, 20, 88);
+
+            ctx.beginPath();
+            ctx.moveTo(640, 145);
+            ctx.lineTo(650, 120);
+            ctx.lineTo(660, 145);
+            ctx.closePath();
+            ctx.fill();
+
+            // handle (royal red grip)
+            ctx.fillStyle = "#8B0000"; // deep crimson
+            ctx.fillRect(645, 240, 10, 30);
+
+            // hilt (gold crossguard)
+            ctx.fillStyle = "#D4AF37"; // metallic gold
+            ctx.fillRect(626, 232, 50, 12);
+
+            // eyes (glowing red)
+            ctx.fillStyle = "#B50000";
+            ctx.fillRect(644, 166, 4, 14);
+            ctx.fillRect(652, 166, 4, 14);
+
+            // mouth (darker gold/bronze for contrast)
+            ctx.fillStyle = "#A67C00";
+            ctx.fillRect(646, 190, 8, 4);        
+        }
         function drawEnemy() {
             if (enemy.isBoss && enemy.bossNumber === 1) {
                 drawDragon();
@@ -989,6 +1052,8 @@ IS201
                 drawKraken();
             } else if (enemy.isBoss && enemy.bossNumber === 3) {
                 drawMouseBoss();
+            } else if (enemy.isBoss && enemy.bossNumber === 4) {
+                drawExcalibur();
             } else if (enemy.name === "Skeleton") {
                 drawSkeleton();
             } else if (enemy.name === "Goblin") {
@@ -1009,7 +1074,7 @@ IS201
         }
 
         function renderCombat() {
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
             //color gradient!
             gradient.addColorStop(0, "#516DA8");     // start
             gradient.addColorStop(0.5, "#000000"); // middle
@@ -1042,7 +1107,7 @@ IS201
         }
 
         function renderGameOver() {
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
             //color gradient!
             gradient.addColorStop(0, "#F25252");     // start
             gradient.addColorStop(0.5, "#B02323"); // middle
@@ -1061,7 +1126,7 @@ IS201
         }
 
         function renderVictory() {
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
             //color gradient!
             gradient.addColorStop(0, "#0C4199");     // start
             gradient.addColorStop(0.5, "#3267C2"); // middle
@@ -1072,19 +1137,19 @@ IS201
             ctx.fillStyle = "#fff7eb";
             ctx.font = "700 34px Cambria";
             ctx.textAlign = "center";
-            ctx.fillText("Congratulations! Swordy the Sword has slain every foe,", canvas.width / 2, 82);
-            ctx.fillText("and awaits the arrival of King Arthur", canvas.width / 2, 122);
-            ctx.fillText("to grant him new life.", canvas.width / 2, 162);
+            ctx.fillText("Congratulations! Swordy the Sword has slain every foe,", canvas.width / 2, 70);
+            ctx.fillText("and awaits the arrival of King Arthur", canvas.width / 2, 110);
+            ctx.fillText("to grant him new life.", canvas.width / 2, 150);
             ctx.textAlign = "left";
 
+            drawSwordy(); //put swordy in the stone
             ctx.fillStyle = "#7f7f85";
             ctx.beginPath();
-            ctx.arc(canvas.width / 2, 330, 88, Math.PI, 0);
-            ctx.lineTo(canvas.width / 2 + 88, 330);
-            ctx.lineTo(canvas.width / 2 - 88, 330);
+            ctx.arc(canvas.width / 2, 380, 88, Math.PI, 0);
+            ctx.lineTo(canvas.width / 2 + 88, 380);
+            ctx.lineTo(canvas.width / 2 - 88, 380);
             ctx.closePath();
             ctx.fill();
-            drawSwordy();
         }
 
         function renderShop() {
